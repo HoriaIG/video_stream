@@ -50,7 +50,16 @@ int main(int argc, char *argv[]) {
     GstBus *bus;
     GstMessage *msg;
     //filters
-    GstElement *capabilityfilter, *convertToRGB, *convertFromRGB, *flip, *capsRGB;
+    GstElement 
+        *capabilityfilter, 
+        *convertToRGB, 
+        *convertFromRGB, 
+        *flip, 
+        *capsRGB, 
+        *encoder, 
+        *decoder,
+        *h264parse,
+        *convertFinal;
     //find the video camera code
     ////////////////////////////////////////////////////////
 
@@ -159,6 +168,15 @@ int main(int argc, char *argv[]) {
     flip = gst_element_factory_make("videoflip", "flip180");
     g_object_set(flip, "method", 2, nullptr); 
 
+    //encode decoder
+    encoder = gst_element_factory_make("x264enc", "encoder");
+    g_object_set(encoder, "tune", 0x00000004, nullptr); 
+
+    h264parse = gst_element_factory_make("h264parse", "h264parse");
+    decoder = gst_element_factory_make("avdec_h264", "decoder");
+
+    convertFinal = gst_element_factory_make("videoconvert", "convertFinal");
+
     //need this to bind the pipeline to the source and sink created earlier
     gst_bin_add_many(
         GST_BIN(pipeline), 
@@ -167,19 +185,27 @@ int main(int argc, char *argv[]) {
         convertToRGB, 
         capsRGB, 
         flip, 
-        convertFromRGB, 
+        convertFromRGB,
+        encoder,
+        h264parse,  
+        decoder,
+        convertFinal,
         sink, 
         nullptr
     );
 
-    //connect the input to output
+    //connect the input to output in the order
     bool linkSuccess = gst_element_link_many(
         source, 
         capabilityfilter, 
         convertToRGB, 
         capsRGB, 
         flip, 
-        convertFromRGB, 
+        convertFromRGB,
+        encoder,
+        h264parse,
+        decoder,
+        convertFinal,
         sink, 
         nullptr
     );
