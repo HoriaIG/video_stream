@@ -13,6 +13,36 @@
 
 using namespace std;
 
+static GstPadProbeReturn invert_colors(
+    GstPad *pad,
+    GstPadProbeInfo *info,
+    gpointer user_data)
+{
+    (void) pad;
+    (void) user_data;
+    GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+
+    if (!buffer)
+        return GST_PAD_PROBE_OK;
+
+    GstMapInfo map;
+
+    if (gst_buffer_map(buffer, &map, GST_MAP_READWRITE)) {
+
+        // RGB = 3 bytes per pixel
+        for (gsize i = 0; i + 2 < map.size; i += 3) {
+            map.data[i]     = 255 - map.data[i];     // R
+            map.data[i + 1] = 255 - map.data[i + 1]; // G
+            map.data[i + 2] = 255 - map.data[i + 2]; // B
+        }
+
+        gst_buffer_unmap(buffer, &map);
+    }
+
+    return GST_PAD_PROBE_OK;
+}
+
+
 int main(int argc, char *argv[]) {
     
     //declare the main variables
@@ -107,26 +137,57 @@ int main(int argc, char *argv[]) {
         nullptr
     );
 
-    
+
     g_object_set(capsRGB, "caps", capabilitiesRGB, nullptr);
     gst_caps_unref(capabilitiesRGB);
     
-    //color inverter using a pad probe     //3 is color inverter + blue hue
-    GstElement *inverterRGB = gst_element_factory_make("coloreffects", "inverterRGB");
-    g_object_set(inverterRGB, "preset", 3, nullptr);
+    //color inverter using a pad probe 
+    GstPad *rgbPad = gst_element_get_static_pad(capsRGB, "src");
+
+    gst_pad_add_probe(
+        rgbPad,
+        GST_PAD_PROBE_TYPE_BUFFER,
+        invert_colors,
+        nullptr,
+        nullptr
+    );
+
+    gst_object_unref(rgbPad);
+
     
     //flip upside down
     flip = gst_element_factory_make("videoflip", "flip180");
     g_object_set(flip, "method", 2, nullptr); 
 
     //need this to bind the pipeline to the source and sink created earlier
-    gst_bin_add_many(GST_BIN(pipeline), source, capabilityfilter, convertToRGB, capsRGB, flip, inverterRGB, convertFromRGB, sink, nullptr);
+    gst_bin_add_many(
+        GST_BIN(pipeline), 
+        source, 
+        capabilityfilter, 
+        convertToRGB, 
+        capsRGB, 
+        flip, 
+        convertFromRGB, 
+        sink, 
+        nullptr
+    );
 
     //connect the input to output
-    if(!gst_element_link_many(source, capabilityfilter, convertToRGB, capsRGB, flip, inverterRGB, convertFromRGB, sink, nullptr)) {
+    bool linkSuccess = gst_element_link_many(
+        source, 
+        capabilityfilter, 
+        convertToRGB, 
+        capsRGB, 
+        flip, 
+        convertFromRGB, 
+        sink, 
+        nullptr
+    );
+    if (!linkSuccess) {
         std::cerr << "FAILED TO LINK PIPELINE\n";
         return 1;
     }
+
 
     //starting the actual streaming
     ///////////////////////////////////////////////////////////////////
