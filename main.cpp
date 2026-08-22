@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
         *encoder, 
         *decoder,
         *h264parse,
-        *convertFinal;
+        *convertFinal,
+        *displayFPS;
     //find the video camera code
     ////////////////////////////////////////////////////////
 
@@ -177,6 +178,15 @@ int main(int argc, char *argv[]) {
 
     convertFinal = gst_element_factory_make("videoconvert", "convertFinal");
 
+    displayFPS = gst_element_factory_make("fpsdisplaysink", "displayFPS");
+
+    g_object_set(
+        displayFPS,
+        "video-sink", sink,
+        "text-overlay", TRUE,
+        nullptr
+    );
+
     //need this to bind the pipeline to the source and sink created earlier
     gst_bin_add_many(
         GST_BIN(pipeline), 
@@ -190,7 +200,8 @@ int main(int argc, char *argv[]) {
         h264parse,  
         decoder,
         convertFinal,
-        sink, 
+        displayFPS,
+        //sink, 
         nullptr
     );
 
@@ -206,7 +217,8 @@ int main(int argc, char *argv[]) {
         h264parse,
         decoder,
         convertFinal,
-        sink, 
+        displayFPS,
+        //sink, 
         nullptr
     );
     if (!linkSuccess) {
