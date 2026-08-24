@@ -1,18 +1,25 @@
 CXX = g++
 
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 \
-           $(shell pkg-config --cflags gstreamer-1.0 gstreamer-video-1.0 gstreamer-app-1.0 opencv4)
+           $(shell pkg-config --cflags gstreamer-1.0 gstreamer-video-1.0 gstreamer-app-1.0)
 
-LDLIBS = $(shell pkg-config --libs gstreamer-1.0 gstreamer-video-1.0 gstreamer-app-1.0 opencv4)
+LDLIBS = $(shell pkg-config --libs gstreamer-1.0 gstreamer-video-1.0 gstreamer-app-1.0)
 
-TARGET = main
-SRC = main.cpp
+TARGETS = main camerafind
+
+MAIN_SRC = main.cpp
+CAMERAFIND_SRC = camerafind.cpp
 HEADERS = main_headers.h
 
-$(TARGET): $(SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET) $(LDLIBS)
+all: $(TARGETS)
+
+main: $(MAIN_SRC) $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(MAIN_SRC) -o $@ $(LDLIBS)
+
+camerafind: $(CAMERAFIND_SRC)
+	$(CXX) $(CXXFLAGS) $(CAMERAFIND_SRC) -o $@ $(LDLIBS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGETS)
 
-.PHONY: clean
+.PHONY: all clean

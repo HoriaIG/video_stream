@@ -8,4 +8,3 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <gst/app/app.h>
-#include <opencv2/opencv.hpp>

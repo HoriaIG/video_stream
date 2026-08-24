@@ -1,15 +1,4 @@
-//#include "main_headers.h"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <stdexcept>
-#include <gst/gst.h>
-#include <gst/video/video.h>
-#include <gst/app/app.h>
-#include <opencv2/opencv.hpp>
+#include "main_headers.h"
 
 using namespace std;
 
@@ -45,7 +34,7 @@ static GstPadProbeReturn invert_colors(
 
 int main(int argc, char *argv[]) {
     
-    //declare the main variables
+    // declare the main variables
     GstElement *pipeline, *source, *sink;
     GstBus *bus;
     GstMessage *msg;
@@ -61,18 +50,18 @@ int main(int argc, char *argv[]) {
         *h264parse,
         *convertFinal,
         *displayFPS;
-    //find the video camera code
+    // find the video camera code
     ////////////////////////////////////////////////////////
 
-    //init gstreamer
+    // init gstreamer
     gst_init(&argc, &argv);
     
-    //create the camera listing obj
+    // create the camera listing obj
     GstDeviceMonitor *monitor = gst_device_monitor_new();
-    //add some filtering for video only
+    // add some filtering for video only
     gst_device_monitor_add_filter(monitor, "Video/Source", nullptr);
 
-    //start the monitor with the obj 
+    // start the monitor with the obj 
     gst_device_monitor_start(monitor);
 
     GList *devices = gst_device_monitor_get_devices(monitor);
@@ -91,10 +80,11 @@ int main(int argc, char *argv[]) {
         GstCaps* capString = gst_device_get_caps(device);
         cout << "Capabilities: " << gst_caps_to_string(capString) << "\n" << "\n";
 
-        //the next part can be removed if you just want the last camera interface
-        //for me it has to be video2 (usually the last one seems to be default but not today)
+        // the next part can be removed if you just want the last camera interface
+        // for me it has to be video2 (usually the last one seems to be default but not today)
         const gchar *path = gst_structure_get_string(propString, "api.v4l2.path");
-        if (path && strcmp(path, "/dev/video2") == 0) {
+        std::string requestedPath = argv[1];
+        if (path && requestedPath == path) {
             gst_structure_free(propString);
             break;
         }
@@ -104,43 +94,47 @@ int main(int argc, char *argv[]) {
 
     gst_device_monitor_stop(monitor);
     gst_object_unref(monitor);
-    //disclaimer all the code above was just to get the video2 path for the camera
-    //create video pipe
+    // disclaimer all the code above was just to get the video2 path for the camera
+    // create video pipe
     ////////////////////////////////////////////////////////
     
-    //this is the process pipeline creation to some default, could be test-pipeline
+    // this is the process pipeline creation to some default, could be test-pipeline
     pipeline = gst_pipeline_new("camera-pipeline");
-    //create the element by using the found camera device
+    // create the element by using the found camera device
     source = gst_device_create_element(device, "camera");
-    //this is the endpoint sink display, we use the standard audiovideosink
+    // this is the endpoint sink display, we use the standard audiovideosink
     sink = gst_element_factory_make("autovideosink", "display");
     if (!pipeline || !source || !sink) {
         cerr << "Failed to create GStreamer elements\n";
         return 1;
     }   
 
-    //the next piece of code is needed because audiovideosink has no autonegotiation, so we force it
+    // the next piece of code is needed because audiovideosink has no autonegotiation, so we force it
     capabilityfilter = gst_element_factory_make("capsfilter", "camera-caps");
 
-    //you MUST Use the correct width height framerate from the previously printed capabilities in the loop above
+    // you MUST Use the correct width height framerate from the previously printed capabilities in the loop above
+    int width = std::stoi(argv[2]);
+    int height = std::stoi(argv[3]);
+    int framerate = std::stoi(argv[4]);
+
     GstCaps *capabilities = gst_caps_new_simple(
         "video/x-raw",
         "format", G_TYPE_STRING, "YUY2",
-        "width", G_TYPE_INT, 1280,
-        "height", G_TYPE_INT, 720,
-        "framerate", GST_TYPE_FRACTION, 15, 1,
+        "width", G_TYPE_INT, width,
+        "height", G_TYPE_INT, height,
+        "framerate", GST_TYPE_FRACTION, framerate, 1,
         nullptr
     );
     g_object_set(capabilityfilter, "caps", capabilities, nullptr);
     gst_caps_unref(capabilities);
 
-    //convert the video format
+    // convert the video format
     convertToRGB = gst_element_factory_make("videoconvert", "convertToRGB");
     convertFromRGB = gst_element_factory_make("videoconvert", "convertFromRGB");
 
     capsRGB = gst_element_factory_make("capsfilter", "capsRGB");
 
-    //you need the same ones here from the list
+    // you need the same ones here from the list
     GstCaps *capabilitiesRGB = gst_caps_new_simple(
         "video/x-raw",
         "format", G_TYPE_STRING, "RGB",
@@ -151,7 +145,7 @@ int main(int argc, char *argv[]) {
     g_object_set(capsRGB, "caps", capabilitiesRGB, nullptr);
     gst_caps_unref(capabilitiesRGB);
     
-    //color inverter using a pad probe 
+    // color inverter using a pad probe 
     GstPad *rgbPad = gst_element_get_static_pad(capsRGB, "src");
 
     gst_pad_add_probe(
@@ -165,7 +159,7 @@ int main(int argc, char *argv[]) {
     gst_object_unref(rgbPad);
 
     
-    //flip upside down
+    // flip upside down
     flip = gst_element_factory_make("videoflip", "flip180");
     g_object_set(flip, "method", 2, nullptr); 
 
@@ -187,7 +181,7 @@ int main(int argc, char *argv[]) {
         nullptr
     );
 
-    //need this to bind the pipeline to the source and sink created earlier
+    // need this to bind the pipeline to the source and sink created earlier
     gst_bin_add_many(
         GST_BIN(pipeline), 
         source, 
@@ -205,7 +199,7 @@ int main(int argc, char *argv[]) {
         nullptr
     );
 
-    //connect the input to output in the order
+    // connect the input to output in the order
     bool linkSuccess = gst_element_link_many(
         source, 
         capabilityfilter, 
@@ -227,17 +221,16 @@ int main(int argc, char *argv[]) {
     }
 
 
-    //starting the actual streaming
+    // starting the actual streaming
     ///////////////////////////////////////////////////////////////////
     
-    //start the pipeline
+    // start the pipeline
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     
-    //wait until error or EOS
+    // wait until error or EOS
     bus = gst_element_get_bus(pipeline);
 
     while (true) {
-        //blocking function
         msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
 
         if (msg) {
@@ -246,7 +239,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    //clean up the rest of elements
+    // clean up the rest of elements
     gst_element_set_state(pipeline, GST_STATE_NULL);
 
     gst_object_unref(bus);
