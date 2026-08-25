@@ -73,5 +73,5 @@ The width, height, and framerate must match a configuration supported by the sel
 - Display
 
 
-The camera stream is converted to RGB, after which the colors are inverted using a GStreamer pad probe. The video is then rotated 180 degrees.
+The camera stream is converted to RGB, after which the colors are inverted using a GStreamer pad probe. The video is then flipped by 180 degrees.
 The processed video is converted to a format suitable for H.264 encoding, encoded, parsed, and decoded before being displayed.

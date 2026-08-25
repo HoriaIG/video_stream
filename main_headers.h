@@ -1,10 +1,5 @@
 #include <iostream>
-#include <vector>
 #include <string>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <stdexcept>
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <gst/app/app.h>

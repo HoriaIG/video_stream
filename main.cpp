@@ -2,11 +2,8 @@
 
 using namespace std;
 
-static GstPadProbeReturn invert_colors(
-    GstPad *pad,
-    GstPadProbeInfo *info,
-    gpointer user_data)
-{
+static GstPadProbeReturn invert_colors( GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
+
     (void) pad;
     (void) user_data;
     GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
@@ -34,7 +31,6 @@ static GstPadProbeReturn invert_colors(
 
 int main(int argc, char *argv[]) {
     
-    // declare the main variables
     GstElement *pipeline, *source, *sink;
     GstBus *bus;
     GstMessage *msg;
@@ -79,6 +75,9 @@ int main(int argc, char *argv[]) {
 
         GstCaps* capString = gst_device_get_caps(device);
         cout << "Capabilities: " << gst_caps_to_string(capString) << "\n" << "\n";
+        if (capString) {
+            gst_caps_unref(capString);
+        }
 
         // the next part can be removed if you just want the last camera interface
         // for me it has to be video2 (usually the last one seems to be default but not today)
